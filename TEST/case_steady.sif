@@ -1,0 +1,170 @@
+! ══════════════════════════════════════════════════════════════════════════════
+!  Elmer — diametrical permanent magnet, steady-state
+!  Based on working configuration from D:\Elmer\TEST2\case.sif
+!
+!  Magnet: NdFeB cylinder  D=30mm  H=80mm  (axis Z, at origin)
+!  Magnetization: along +X  (diametrical)
+!  Domain: 0.5m × 0.5m × 0.5m air box
+!
+!  Body/Boundary numbering (after ElmerGrid renumber):
+!    Body 1 = magnet,  Body 2 = air_rotating,  Body 3 = air_stationary
+!    BC 1 = far_field,  BC 2 = mag_top,  BC 3 = mag_bot
+!    BC 4 = mag_side,   BC 5 = sliding_rotor,  BC 6 = sliding_stator
+!
+!  Usage:
+!    1.  python magnet_mesh.py
+!    2.  ElmerGrid 14 2 mesh.msh -out mesh2 -autoclean
+!    3.  cd mesh2 && cp ../case_steady.sif .
+!    4.  ElmerSolver case_steady.sif
+! ══════════════════════════════════════════════════════════════════════════════
+
+Check Keywords Warn
+
+Header
+  Mesh DB "." "."
+  Include Path ""
+  Results Directory "results"
+End
+
+Simulation
+  Max Output Level = 5
+  Coordinate System = Cartesian 3D
+  Coordinate Mapping(3) = 1 2 3
+  Simulation Type = Steady State
+  Steady State Max Iterations = 1
+  Output File = "case.result"
+  Post File = "case.vtu"
+End
+
+Constants
+  Permeability of Vacuum = 1.2566370614359173e-06
+  Permittivity of Vacuum = 8.854187817e-12
+End
+
+! ══════════════════════════════════════════════════════════════════════════════
+!  SOLVERS
+! ══════════════════════════════════════════════════════════════════════════════
+
+Solver 1
+  Equation = "Magnetic AV"
+  Procedure = "MagnetoDynamics" "WhitneyAVSolver"
+  Exec Solver = Always
+  Stabilize = True
+  Optimize Bandwidth = True
+
+  Linear System Solver = Iterative
+  Linear System Iterative Method = BiCGStabl
+  Linear System Max Iterations = 2000
+  Linear System Convergence Tolerance = 1.0e-8
+  Linear System Preconditioning = ILU0
+
+  Steady State Convergence Tolerance = 1.0e-6
+
+  ! Tree gauge disabled: Elmer 9.0 on Windows crashes during
+  ! gauge tree construction. With A=0 on far-field boundaries
+  ! the nullspace is sufficiently constrained.
+End
+
+Solver 2
+  Equation = "Magnetic Field Calc"
+  Procedure = "MagnetoDynamics" "MagnetoDynamicsCalcFields"
+  Potential Variable = AV
+  Exec Solver = Always
+
+  Calculate Magnetic Field Strength = True
+  Calculate Magnetic Flux Density = True
+  Calculate Magnetic Vector Potential = True
+  Calculate Nodal Fields = True
+  Calculate Current Density = False
+  Calculate Joule Heating = False
+  Calculate Nodal Forces = False
+
+  Linear System Solver = Iterative
+  Linear System Iterative Method = CG
+  Linear System Max Iterations = 1000
+  Linear System Convergence Tolerance = 1.0e-8
+  Linear System Preconditioning = ILU0
+  Steady State Convergence Tolerance = 1.0e-6
+End
+
+Solver 3
+  Equation = "Result Output"
+  Procedure = "ResultOutputSolve" "ResultOutputSolver"
+  Exec Solver = After Simulation
+
+  Output File Name = "case"
+  Output Format = "Vtu"
+  Vtu Format = True
+  Binary Output = True
+  Discontinuous Bodies = True
+  Save Geometry IDs = True
+End
+
+! ══════════════════════════════════════════════════════════════════════════════
+!  EQUATION
+! ══════════════════════════════════════════════════════════════════════════════
+Equation 1
+  Name = "Magnetics"
+  Use Piola Transform = Logical True
+  Active Solvers(2) = 1 2
+End
+
+! ══════════════════════════════════════════════════════════════════════════════
+!  MATERIALS
+!  M = Br / μ₀ ≈ 1.2 / (4π×10⁻⁷) ≈ 955 kA/m  (NdFeB N35)
+! ══════════════════════════════════════════════════════════════════════════════
+
+Material 1
+  Name = "NdFeB_N35"
+  Relative Permeability = 1.05
+  ! Diametrical magnetization along +X  [A/m]
+  Magnetization 1 = 955000.0
+  Magnetization 2 = 0.0
+  Magnetization 3 = 0.0
+End
+
+Material 2
+  Name = "Air"
+  Relative Permeability = 1.0
+End
+
+Material 3
+  Name = "Air"
+  Relative Permeability = 1.0
+End
+
+! ══════════════════════════════════════════════════════════════════════════════
+!  BODY DEFINITIONS
+! ══════════════════════════════════════════════════════════════════════════════
+Body 1
+  Target Bodies(1) = 1
+  Name = "Magnet"
+  Equation = 1
+  Material = 1
+End
+
+Body 2
+  Target Bodies(1) = 2
+  Name = "AirRotating"
+  Equation = 1
+  Material = 2
+End
+
+Body 3
+  Target Bodies(1) = 3
+  Name = "AirStationary"
+  Equation = 1
+  Material = 3
+End
+
+! ══════════════════════════════════════════════════════════════════════════════
+!  BOUNDARY CONDITIONS
+! ══════════════════════════════════════════════════════════════════════════════
+
+Boundary Condition 1
+  Target Boundaries(1) = 1
+  Name = "FarField"
+  AV {e} = Real 0
+End
+
+! Boundaries 2-6 are internal interfaces → natural flux-continuity BC
