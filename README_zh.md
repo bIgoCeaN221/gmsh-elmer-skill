@@ -6,7 +6,7 @@
 
 ```bash
 # 克隆仓库
-git clone <repo-url> gmsh-elmer-skill
+git clone git@github.com:bIgoCeaN221/gmsh-elmer-skill.git
 
 # 安装技能到 Claude Code
 # 方式 A：注册为用户技能

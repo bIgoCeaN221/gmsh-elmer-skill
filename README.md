@@ -6,7 +6,7 @@ End-to-end **Gmsh → Elmer FEM** workflow skill for Claude Code. Covers electro
 
 ```bash
 # Clone the repository
-git clone <repo-url> gmsh-elmer-skill
+git clone git@github.com:bIgoCeaN221/gmsh-elmer-skill.git
 
 # Install the skill into Claude Code
 # Option A: register as a user skill
